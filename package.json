@@ -1,6 +1,6 @@
 {
   "name": "@plasius/asset-mcp",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "MCP tool contracts for governed Plasius asset upload, generation, processing, review, promotion, rollback, and manifest lookup.",
   "type": "module",
   "sideEffects": false,
