@@ -29,7 +29,7 @@
     answers, reviewed or structured-only catalog results, and resolution results.
 
 - **Changed**
-  - Added the released `@plasius/asset-contracts` `^0.2.0` runtime dependency
+  - Added the released `@plasius/asset-contracts` `^0.3.1` runtime dependency
     while preserving every legacy dotted tool name and envelope behavior.
   - Candidate-bearing outputs now use one optional top-level review envelope;
     catalog matches are non-confirmable and expose at most one inline review.

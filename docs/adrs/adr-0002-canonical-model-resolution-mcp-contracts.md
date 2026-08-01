@@ -32,7 +32,7 @@ Add an independent snake_case tool registry containing:
 Each frozen descriptor publishes JSON Schema 2020-12 input and structured
 output schemas, standard MCP behavioral annotations, OAuth security schemes,
 one required backend capability, and stored rollout-flag metadata. The new
-contracts reuse `@plasius/asset-contracts@^0.2.0` constants and model types
+contracts reuse `@plasius/asset-contracts@^0.3.1` constants and model types
 instead of redefining assurance bands, lifecycle states, view order, or
 original-image size. Hosted adapters apply the published JSON Schema first and
 then use the exported request and structured-output normalizers for cross-field
@@ -122,7 +122,7 @@ but this package does not execute hosted actions.
   stable MCP boundary.
 - Any schema expansion must remain additive within this contract version or
   publish a new version.
-- `@plasius/asset-contracts@0.2.0` still stores refinement questions as strings
+- `@plasius/asset-contracts@0.3.1` still stores refinement questions as strings
   and does not cap asset IDs at 128 characters. Hosted adapters enforce the MCP
   projection until those two constraints ship in the next shared-contract
   release.
