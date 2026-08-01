@@ -66,3 +66,5 @@ export function createAssetMcpRequestEnvelope<TPayload>(
   }
   return Object.freeze({ toolName, requestId, payload });
 }
+
+export * from "./model-resolution.js";

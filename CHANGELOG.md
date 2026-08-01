@@ -3,16 +3,41 @@
 ## Unreleased
 
 - **Added**
-  - (placeholder)
+  - Added eight canonical snake_case model-resolution MCP tool descriptors with
+    JSON Schema 2020-12 input/output contracts, OAuth scopes, capabilities,
+    rollout metadata, and MCP annotations.
+  - Added exact no-substitution ranker selection contracts, authenticated model
+    resource templates, and a four-view 512 PNG result helper linked to 1024
+    `mcp://models/...` originals.
+  - Added canonical public-safe assessment, provenance, rights, technical, and
+    passed hard-gate projections plus stable refinement question IDs.
+  - Added runtime normalizers for canonical requests, question-addressed retry
+    answers, reviewed or structured-only catalog results, and resolution results.
 
 - **Changed**
-  - (placeholder)
+  - Added the released `@plasius/asset-contracts` `^0.2.0` runtime dependency
+    while preserving every legacy dotted tool name and envelope behavior.
+  - Candidate-bearing outputs now use one optional top-level review envelope;
+    catalog matches are non-confirmable and expose at most one inline review.
+  - Candidate evidence now preserves distinct raw-source, canonical-asset, and
+    processing-closure hashes for the rights, match, and hard-gate domains.
+  - Request revisions now match the released immutable `0..3` boundary, and
+    selected ranker results use one flattened exact-selection identity.
 
 - **Fixed**
-  - (placeholder)
+  - Aligned retry questions and answers through stable `questionId` values and
+    prohibited high assurance ceilings for text-only rankers.
+  - Bound selected rankers, final assets, rights decisions, and each hard gate
+    across structured-only and reviewed outputs, including fidelity warnings.
 
 - **Security**
-  - (placeholder)
+  - Canonical schemas and result helpers reject malformed identifiers, unsafe
+    external/private resource references, traversal syntax, incomplete view
+    packs, and implicit ranker substitution.
+  - Four-view helpers verify decoded PNG signatures, 512×512 IHDR dimensions,
+    and SHA-256 hashes before emitting inline review images.
+  - Public normalizers reject case-insensitive request duplicates, mismatched
+    manifest identities, duplicate question IDs, and inconsistent hash domains.
 
 ## [0.1.4] - 2026-06-28
 
