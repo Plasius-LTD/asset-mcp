@@ -38,6 +38,8 @@
     and SHA-256 hashes before emitting inline review images.
   - Public normalizers reject case-insensitive request duplicates, mismatched
     manifest identities, duplicate question IDs, and inconsistent hash domains.
+  - Added fail-closed source and npm-package admission for the administrative contributor registry and pinned the CI/CD runtime to Node.js 24.18.0 LTS.
+  - (placeholder)
 
 ## [0.1.4] - 2026-06-28
 
