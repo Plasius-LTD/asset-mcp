@@ -1,6 +1,6 @@
 {
   "name": "@plasius/asset-mcp",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "description": "MCP contracts for governed Plasius asset workflows and asynchronous model resolution.",
   "type": "module",
   "sideEffects": false,

@@ -3,6 +3,20 @@
 ## Unreleased
 
 - **Added**
+  - (placeholder)
+
+- **Changed**
+  - (placeholder)
+
+- **Fixed**
+  - (placeholder)
+
+- **Security**
+  - (placeholder)
+
+## [0.1.5] - 2026-08-01
+
+- **Added**
   - Added eight canonical snake_case model-resolution MCP tool descriptors with
     JSON Schema 2020-12 input/output contracts, OAuth scopes, capabilities,
     rollout metadata, and MCP annotations.
@@ -93,3 +107,4 @@
 [0.1.2]: https://github.com/Plasius-LTD/asset-mcp/releases/tag/v0.1.2
 [0.1.3]: https://github.com/Plasius-LTD/asset-mcp/releases/tag/v0.1.3
 [0.1.4]: https://github.com/Plasius-LTD/asset-mcp/releases/tag/v0.1.4
+[0.1.5]: https://github.com/Plasius-LTD/asset-mcp/releases/tag/v0.1.5
