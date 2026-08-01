@@ -121,7 +121,7 @@ catalog manifests. A host must authenticate every read, enforce requester
 ownership for staged resources, and serve only promoted catalog versions
 through catalog templates.
 
-`@plasius/asset-contracts@0.2.0` still represents resolution questions as
+`@plasius/asset-contracts@0.3.1` still represents resolution questions as
 strings and does not yet apply the MCP package's 128-character asset-ID cap.
 Until the next shared-contract release adopts those two additive constraints,
 host adapters must map stored question prompts to stable MCP `questionId`
