@@ -13,6 +13,7 @@
 
 - **Security**
   - Removed the legacy npm write-token path and added a fail-closed Node 24 and npm 11.5.1-or-newer OIDC runtime check.
+  - Enabled same-repository pull-request CI while preventing external forks and `pull_request_target` from executing repository code on self-hosted runners.
 
 ## [0.1.5] - 2026-08-01
 
