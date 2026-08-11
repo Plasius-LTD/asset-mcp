@@ -6,13 +6,13 @@
   - (placeholder)
 
 - **Changed**
-  - (placeholder)
+  - Bound npm publication to the exact prepared `main` commit after successful push-triggered CI.
 
 - **Fixed**
   - (placeholder)
 
 - **Security**
-  - (placeholder)
+  - Removed the legacy npm write-token path and added a fail-closed Node 24 and npm 11.5.1-or-newer OIDC runtime check.
 
 ## [0.1.5] - 2026-08-01
 
