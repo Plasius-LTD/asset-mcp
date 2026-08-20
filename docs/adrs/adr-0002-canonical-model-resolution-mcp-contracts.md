@@ -70,6 +70,9 @@ Structured view metadata references authenticated 1024×1024 originals using
 bounded `mcp://models/...` resources. The package publishes requester-owned
 resolution, candidate-manifest, and original templates together with promoted
 catalog-original and catalog-manifest templates, but performs no reads itself.
+Promoted-catalog resource matching validates the path version with the shared
+immutable asset-version validator; mutable aliases and wildcard labels fail
+closed before a host can resolve a catalog resource.
 
 The legacy dotted constants, definitions, types, and envelope helper remain
 unchanged. Hosts may implement compatibility aliases over the same services,

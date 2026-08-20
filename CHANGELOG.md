@@ -9,9 +9,14 @@
   - (placeholder)
 
 - **Fixed**
+  - Rejected moving aliases and wildcard labels at promoted-catalog MCP
+    resource boundaries while preserving exact immutable versions and every
+    legacy dotted tool API.
   - (placeholder)
 
 - **Security**
+  - Bound authenticated catalog manifests and review originals to exact
+    immutable asset versions using the canonical shared validator.
   - (placeholder)
 
 ## [0.1.5] - 2026-08-01
