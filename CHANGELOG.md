@@ -6,15 +6,22 @@
   - (placeholder)
 
 - **Changed**
-  - (placeholder)
+  - Bound npm publication to the exact prepared `main` commit after successful push-triggered CI.
 
 - **Fixed**
+  - Routed same-repository pull-request validation through the allowlisted
+    reusable self-hosted workflow on `main`, restoring runner admission without
+    exposing quarantined capacity to forks.
+  - Disabled shared npm caching on quarantined self-hosted CI so cache setup or
+    post-job failures cannot strand exact-SHA validation runs.
   - Rejected moving aliases and wildcard labels at promoted-catalog MCP
     resource boundaries while preserving exact immutable versions and every
     legacy dotted tool API.
   - (placeholder)
 
 - **Security**
+  - Removed the legacy npm write-token path and added a fail-closed Node 24 and npm 11.5.1-or-newer OIDC runtime check.
+  - Enabled same-repository pull-request CI while preventing external forks and `pull_request_target` from executing repository code on self-hosted runners.
   - Bound authenticated catalog manifests and review originals to exact
     immutable asset versions using the canonical shared validator.
   - (placeholder)
