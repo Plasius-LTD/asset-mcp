@@ -119,7 +119,9 @@ Resource templates cover requester-owned resolutions, candidate manifests,
 requester and promoted-catalog confirmation originals, and immutable promoted
 catalog manifests. A host must authenticate every read, enforce requester
 ownership for staged resources, and serve only promoted catalog versions
-through catalog templates.
+through catalog templates. Catalog resource matching uses the canonical
+immutable-version validator, so moving aliases such as `latest` or `production`
+and wildcard labels cannot be treated as immutable catalog evidence.
 
 `@plasius/asset-contracts@0.3.1` still represents resolution questions as
 strings and does not yet apply the MCP package's 128-character asset-ID cap.

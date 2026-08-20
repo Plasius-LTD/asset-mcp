@@ -13,6 +13,7 @@ import {
   MODEL_RESOLUTION_STATES,
   MODEL_TEXT_ONLY_ASSURANCE_CEILING_REASON_CODE,
   STATIC_WORLD_V1_MODEL_POLICY,
+  assertImmutableAssetVersion,
   classifyModelMatchAssurance,
   createModelAssetRef,
   createModelRequestSpec,
@@ -2878,5 +2879,22 @@ export function isModelMcpResourceUri(value: unknown): value is string {
   return typeof value === "string"
     && value.length <= 512
     && !value.includes("%")
-    && MODEL_RESOURCE_PATTERNS.some((pattern) => pattern.test(value));
+    && MODEL_RESOURCE_PATTERNS.some((pattern) => pattern.test(value))
+    && hasImmutableCatalogResourceVersion(value);
+}
+
+function hasImmutableCatalogResourceVersion(uri: string): boolean {
+  const segments = uri.slice("mcp://models/".length).split("/");
+  if (segments[0] !== "catalog") {
+    return true;
+  }
+  if (segments[2] !== "versions" || segments[3] === undefined) {
+    return false;
+  }
+  try {
+    assertImmutableAssetVersion(segments[3]);
+    return true;
+  } catch {
+    return false;
+  }
 }
