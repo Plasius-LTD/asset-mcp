@@ -6,6 +6,20 @@
   - (placeholder)
 
 - **Changed**
+  - (placeholder)
+
+- **Fixed**
+  - (placeholder)
+
+- **Security**
+  - (placeholder)
+
+## [0.1.6] - 2026-08-20
+
+- **Added**
+  - (placeholder)
+
+- **Changed**
   - Bound npm publication to the exact prepared `main` commit after successful push-triggered CI.
 
 - **Fixed**
@@ -120,3 +134,4 @@
 [0.1.3]: https://github.com/Plasius-LTD/asset-mcp/releases/tag/v0.1.3
 [0.1.4]: https://github.com/Plasius-LTD/asset-mcp/releases/tag/v0.1.4
 [0.1.5]: https://github.com/Plasius-LTD/asset-mcp/releases/tag/v0.1.5
+[0.1.6]: https://github.com/Plasius-LTD/asset-mcp/releases/tag/v0.1.6
