@@ -9,6 +9,8 @@
   - Bound npm publication to the exact prepared `main` commit after successful push-triggered CI.
 
 - **Fixed**
+  - Disabled shared npm caching on quarantined self-hosted CI so cache setup or
+    post-job failures cannot strand exact-SHA validation runs.
   - Rejected moving aliases and wildcard labels at promoted-catalog MCP
     resource boundaries while preserving exact immutable versions and every
     legacy dotted tool API.

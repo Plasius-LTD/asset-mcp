@@ -30,6 +30,7 @@ describe("npm release trust boundary", () => {
     expect(ciWorkflow).toContain("pull_request:");
     expect(ciWorkflow).toContain("runs-on: [self-hosted, Linux, X64]");
     expect(ciWorkflow).toContain("github.event.pull_request.head.repo.full_name == github.repository");
+    expect(ciWorkflow).not.toContain('cache: "npm"');
     expect(ciWorkflow).not.toContain("pull_request_target");
     expect(ciWorkflow).not.toContain("fromJSON(vars.");
   });

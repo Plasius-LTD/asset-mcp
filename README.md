@@ -188,8 +188,10 @@ Apache-2.0
 
 CI keeps the administrative contributor registry outside Git and npm package
 artifacts using exact, case-normalised path checks. CI runs on approved
-self-hosted runners. Release preparation and npm publication use GitHub-hosted
-runners with Node.js 24.18.0 LTS and npm 11.5.1 or newer. CD must not be
+self-hosted runners with package-manager caching disabled, preventing shared
+cache state and cache post-job failures from weakening exact-SHA admission.
+Release preparation and npm publication use GitHub-hosted runners with Node.js
+24.18.0 LTS and npm 11.5.1 or newer. CD must not be
 dispatched until the npm trusted-publisher binding is verified. Publication is
 token-free and proceeds only while the prepared commit remains the exact
 `main` head after successful push-triggered CI for that SHA.
