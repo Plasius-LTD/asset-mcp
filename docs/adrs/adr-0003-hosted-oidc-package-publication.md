@@ -17,11 +17,18 @@ job proves the prepared SHA is still the exact remote `main` head, waits for a
 successful push-triggered `ci.yml` run for that SHA, enforces Node 24 with npm
 11.5.1 or newer, and publishes with provenance. Token fallbacks are prohibited.
 
+The event-facing `ci.yml` is a lightweight caller of the repository-owned
+`ci-self-hosted.yml@main` reusable workflow. The runner group allowlists that
+stable workflow identity, while guards in both layers reject external-fork pull
+requests. The reusable jobs request only the `Public CI - Quarantined` group
+with the explicit `self-hosted`, `Linux`, and `X64` labels.
+
 ## Consequences
 
 Publication fails closed if npm's trusted-publisher binding is absent, `main`
 moves, exact-SHA CI has not succeeded, the runtime is unsupported, or OIDC is
-unavailable.
+unavailable. Pull-request validation remains schedulable without granting the
+runner group access to synthetic pull-request workflow identities.
 
 ## Test implications
 

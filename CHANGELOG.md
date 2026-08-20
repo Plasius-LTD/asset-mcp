@@ -9,6 +9,9 @@
   - Bound npm publication to the exact prepared `main` commit after successful push-triggered CI.
 
 - **Fixed**
+  - Routed same-repository pull-request validation through the allowlisted
+    reusable self-hosted workflow on `main`, restoring runner admission without
+    exposing quarantined capacity to forks.
   - Disabled shared npm caching on quarantined self-hosted CI so cache setup or
     post-job failures cannot strand exact-SHA validation runs.
   - Rejected moving aliases and wildcard labels at promoted-catalog MCP

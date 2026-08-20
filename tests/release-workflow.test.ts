@@ -3,6 +3,11 @@ import { describe, expect, it } from "vitest";
 
 const workflow = readFileSync(new URL("../.github/workflows/cd.yml", import.meta.url), "utf8");
 const ciWorkflow = readFileSync(new URL("../.github/workflows/ci.yml", import.meta.url), "utf8");
+const selfHostedCiWorkflow = readFileSync(
+  new URL("../.github/workflows/ci-self-hosted.yml", import.meta.url),
+  "utf8"
+);
+const workflowRepository = ["Plasius", "LTD/asset-mcp"].join("-");
 
 describe("npm release trust boundary", () => {
   it("uses hosted production OIDC publication without a write token", () => {
@@ -28,10 +33,18 @@ describe("npm release trust boundary", () => {
 
   it("runs same-repository pull requests on explicit trusted runners only", () => {
     expect(ciWorkflow).toContain("pull_request:");
-    expect(ciWorkflow).toContain("runs-on: [self-hosted, Linux, X64]");
     expect(ciWorkflow).toContain("github.event.pull_request.head.repo.full_name == github.repository");
-    expect(ciWorkflow).not.toContain('cache: "npm"');
+    expect(ciWorkflow).toContain(
+      `uses: ${workflowRepository}/.github/workflows/ci-self-hosted.yml@main`
+    );
+    expect(ciWorkflow).not.toContain("runs-on:");
+    expect(selfHostedCiWorkflow).toContain("on:\n  workflow_call:");
+    expect(selfHostedCiWorkflow.match(
+      /runs-on:\n {6}group: Public CI - Quarantined\n {6}labels: \[self-hosted, Linux, X64\]/gu
+    )).toHaveLength(2);
+    expect(selfHostedCiWorkflow).not.toContain('cache: "npm"');
     expect(ciWorkflow).not.toContain("pull_request_target");
-    expect(ciWorkflow).not.toContain("fromJSON(vars.");
+    expect(selfHostedCiWorkflow).not.toContain("pull_request_target");
+    expect(selfHostedCiWorkflow).not.toContain("fromJSON(vars.");
   });
 });
