@@ -11,6 +11,11 @@ import {
   MODEL_REQUEST_MAX_REVISION,
   MODEL_RESOLUTION_CONTRACT_VERSION,
   MODEL_RESOLUTION_STATES,
+  MODEL_RESOLUTION_V2_CONTRACT_VERSION,
+  MODEL_RESOLUTION_V2_JSON_SCHEMAS,
+  MODEL_RESOLUTION_V2_STATES,
+  PVOX_CONTENT_TYPE,
+  PVOX_FILE_EXTENSION,
   MODEL_TEXT_ONLY_ASSURANCE_CEILING_REASON_CODE,
   STATIC_WORLD_V1_MODEL_POLICY,
   assertImmutableAssetVersion,
@@ -25,6 +30,24 @@ import {
   type ModelTechnicalProfile,
 } from "@plasius/asset-contracts";
 
+export {
+  MODEL_RESOLUTION_V2_CONTRACT_VERSION,
+  MODEL_RESOLUTION_V2_JSON_SCHEMAS,
+  MODEL_RESOLUTION_V2_STATES,
+  PVOX_CONTENT_TYPE,
+  PVOX_FILE_EXTENSION,
+};
+export type {
+  ModelCandidateV2,
+  ModelProcessingManifestV2,
+  ModelResolutionV2,
+  PhysicalPropertyEvidence,
+  PvoxAssetManifestV1,
+  PvoxEditJournal,
+  VoxelCapabilityAssessment,
+  VoxelTechnicalProfile,
+} from "@plasius/asset-contracts";
+
 /** Version of the additive canonical model-resolution MCP surface. */
 export const MODEL_MCP_CONTRACT_VERSION = "2026-07-13.v1" as const;
 
@@ -35,6 +58,10 @@ export const MODEL_MCP_UNIFIED_FEATURE_FLAG_ID =
 /** Conditional kill switch for external provider acquisition. */
 export const MODEL_MCP_EXTERNAL_HARVEST_FEATURE_FLAG_ID =
   "asset.pipeline.external-model-harvest.enabled" as const;
+
+/** Conditional kill switch for uploaded/generated PVOX processing and promotion. */
+export const MODEL_MCP_PVOX_FEATURE_FLAG_ID =
+  "asset.pipeline.pvox-models.enabled" as const;
 
 /** Conditional, fail-closed Phase 1 generator gate. */
 export const MODEL_MCP_GENERATION_FEATURE_FLAG_ID =
@@ -60,6 +87,55 @@ export const MODEL_MCP_PREVIEW_SIZE_PX = 512 as const;
 
 /** Maximum base64 characters accepted for one bounded inline preview block. */
 export const MODEL_MCP_MAX_PREVIEW_BASE64_LENGTH = 4 * 1024 * 1024;
+
+/** Accepted legal bases for a requester-supplied public demonstration model. */
+export const MODEL_MCP_RIGHTS_ATTESTATION_BASES = Object.freeze([
+  "requester-owned",
+  "authorized-licensee",
+  "public-domain",
+] as const);
+
+/** Runtime shape supplied by ChatGPT for one top-level attachment parameter. */
+export interface ModelMcpSourceFile {
+  /** Temporary HTTPS URL. It must never be persisted, logged, or fingerprinted. */
+  readonly download_url: string;
+  /** Stable ChatGPT file identity used in the idempotency fingerprint. */
+  readonly file_id: string;
+  readonly mime_type?: string;
+  readonly file_name?: string;
+}
+
+/** Optional public acknowledgement data retained only after independent rights review. */
+export interface ModelMcpRightsAttribution {
+  readonly modelTitle?: string;
+  readonly creator?: string;
+  readonly notice?: string;
+  readonly publicSourceUrl?: string;
+  readonly publicLicenseUrl?: string;
+}
+
+/** Requester statement needed before a supplied source can enter the demo pipeline. */
+export interface ModelMcpRightsAttestation {
+  readonly basis: typeof MODEL_MCP_RIGHTS_ATTESTATION_BASES[number];
+  readonly publicDemoRedistributionAllowed: true;
+  readonly derivativeWorksAllowed: true;
+  readonly commercialUseAllowed: true;
+  readonly licenseId?: string;
+  readonly attribution?: ModelMcpRightsAttribution;
+}
+
+/** Additive canonical resolve input accepted by hosted adapters. */
+export interface ModelMcpResolveRequestInput {
+  readonly request: ModelRequestSpec;
+  readonly idempotencyKey: string;
+  readonly sourceFile?: ModelMcpSourceFile;
+  readonly rightsAttestation?: ModelMcpRightsAttestation;
+}
+
+/** Requester-bound input used to derive a replay-safe resolve fingerprint. */
+export interface ModelMcpResolveRequestFingerprintInput extends ModelMcpResolveRequestInput {
+  readonly requesterId: string;
+}
 
 /** Canonical snake_case model-resolution tools, in discovery order. */
 export const MODEL_MCP_TOOL_NAMES = Object.freeze([
@@ -106,6 +182,32 @@ export interface ModelMcpRolloutMetadata {
   readonly conditionalFeatureFlags: readonly string[];
 }
 
+/** Published pointer to the released PVOX v2 contracts used by hosted adapters. */
+export interface ModelMcpPvoxResultContract {
+  readonly representation: "pvox";
+  readonly contractVersion: typeof MODEL_RESOLUTION_V2_CONTRACT_VERSION;
+  readonly resolutionStates: typeof MODEL_RESOLUTION_V2_STATES;
+  readonly resolutionSchemaId: string;
+  readonly candidateSchemaId: string;
+  readonly processingManifestSchemaId: string;
+  readonly contentType: typeof PVOX_CONTENT_TYPE;
+  readonly fileExtension: typeof PVOX_FILE_EXTENSION;
+  readonly requiredFeatureFlag: typeof MODEL_MCP_PVOX_FEATURE_FLAG_ID;
+}
+
+/** Shared immutable PVOX v2 metadata; no hosted processing is implemented here. */
+export const MODEL_MCP_PVOX_RESULT_CONTRACT: ModelMcpPvoxResultContract = deepFreeze({
+  representation: "pvox",
+  contractVersion: MODEL_RESOLUTION_V2_CONTRACT_VERSION,
+  resolutionStates: MODEL_RESOLUTION_V2_STATES,
+  resolutionSchemaId: MODEL_RESOLUTION_V2_JSON_SCHEMAS.modelResolution.$id,
+  candidateSchemaId: MODEL_RESOLUTION_V2_JSON_SCHEMAS.modelCandidate.$id,
+  processingManifestSchemaId: MODEL_RESOLUTION_V2_JSON_SCHEMAS.modelProcessingManifest.$id,
+  contentType: PVOX_CONTENT_TYPE,
+  fileExtension: PVOX_FILE_EXTENSION,
+  requiredFeatureFlag: MODEL_MCP_PVOX_FEATURE_FLAG_ID,
+});
+
 /** Deterministic inline/original review evidence advertised by candidate tools. */
 export interface ModelMcpReviewResultMetadata {
   readonly inlineImageCount: 4;
@@ -140,13 +242,16 @@ export interface ModelMcpToolDefinition {
   readonly featureFlags: readonly string[];
   readonly rollout: ModelMcpRolloutMetadata;
   readonly reviewResult?: ModelMcpReviewResultMetadata;
+  readonly pvoxResultContract?: ModelMcpPvoxResultContract;
   readonly securitySchemes: readonly ModelMcpOAuthSecurityScheme[];
   readonly _meta: {
     readonly securitySchemes: readonly ModelMcpOAuthSecurityScheme[];
+    readonly "openai/fileParams"?: readonly ["sourceFile"];
     readonly "plasius/requiredCapability": string;
     readonly "plasius/featureFlags": readonly string[];
     readonly "plasius/rollout": ModelMcpRolloutMetadata;
     readonly "plasius/reviewResult"?: ModelMcpReviewResultMetadata;
+    readonly "plasius/pvoxResultContract"?: ModelMcpPvoxResultContract;
   };
 }
 
@@ -408,6 +513,9 @@ const MODEL_RESOURCE_PREFIX = "^mcp://models/";
 const REASON_CODE_PATTERN = "^[a-z0-9][a-z0-9._:-]{0,127}$";
 const NON_BLANK_BOUNDED_TEXT_PATTERN = "^(?=.*\\S)[^\\u0000-\\u001F\\u007F]+$";
 const DIRECT_URL_PATTERN = "(?:[Hh][Tt][Tt][Pp][Ss]?://|\\b[Ww][Ww][Ww]\\.)";
+const HTTPS_URL_PATTERN = "^https://[^\\s\\u0000-\\u001F\\u007F]+$";
+const MIME_TYPE_PATTERN = "^[a-z0-9][a-z0-9!#$&^_.+-]{0,126}/[a-z0-9][a-z0-9!#$&^_.+-]{0,126}$";
+const SAFE_FILE_NAME_PATTERN = "^(?=.*\\S)[^\\u0000-\\u001F\\u007F/\\\\]{1,255}$";
 const ISO_TIMESTAMP_PATTERN = "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z$";
 const BASE64_PATTERN = /^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/u;
 const TOKEN_REGEX = new RegExp(TOKEN_PATTERN, "u");
@@ -569,6 +677,59 @@ const requestSpecSchema = objectSchema({
   "hardConstraints",
   "softPreferences",
   "exclusions",
+]);
+
+const sourceFileSchema = objectSchema({
+  download_url: stringSchema({
+    pattern: HTTPS_URL_PATTERN,
+    minLength: 9,
+    maxLength: 4096,
+  }),
+  file_id: boundedTextSchema(512),
+  mime_type: stringSchema({
+    minLength: 3,
+    maxLength: 255,
+    pattern: MIME_TYPE_PATTERN,
+  }),
+  file_name: stringSchema({
+    minLength: 1,
+    maxLength: 255,
+    pattern: SAFE_FILE_NAME_PATTERN,
+    not: { enum: [".", ".."] },
+  }),
+}, ["download_url", "file_id"]);
+
+const rightsAttributionSchema = {
+  ...objectSchema({
+    modelTitle: boundedTextSchema(160),
+    creator: boundedTextSchema(160),
+    notice: boundedTextSchema(500),
+    publicSourceUrl: stringSchema({
+      pattern: HTTPS_URL_PATTERN,
+      minLength: 9,
+      maxLength: 2048,
+    }),
+    publicLicenseUrl: stringSchema({
+      pattern: HTTPS_URL_PATTERN,
+      minLength: 9,
+      maxLength: 2048,
+    }),
+  }, []),
+  minProperties: 1,
+};
+
+const rightsAttestationSchema = objectSchema({
+  basis: { enum: [...MODEL_MCP_RIGHTS_ATTESTATION_BASES] },
+  publicDemoRedistributionAllowed: { const: true },
+  derivativeWorksAllowed: { const: true },
+  commercialUseAllowed: { const: true },
+  licenseId: tokenSchema(),
+  attribution: rightsAttributionSchema,
+}, [
+  "basis",
+  "publicDemoRedistributionAllowed",
+  "derivativeWorksAllowed",
+  "commercialUseAllowed",
 ]);
 
 const rankerDescriptorProperties = {
@@ -1257,10 +1418,18 @@ const inputSchemas: Record<ModelMcpToolName, ModelMcpJsonSchema> = {
   ),
   resolve_model_request: topLevelSchema(
     "Resolve model request input",
-    objectSchema({
-      request: requestSpecSchema,
-      idempotencyKey: tokenSchema(),
-    }),
+    {
+      ...objectSchema({
+        request: requestSpecSchema,
+        idempotencyKey: tokenSchema(),
+        sourceFile: sourceFileSchema,
+        rightsAttestation: rightsAttestationSchema,
+      }, ["request", "idempotencyKey"]),
+      dependentRequired: {
+        sourceFile: ["rightsAttestation"],
+        rightsAttestation: ["sourceFile"],
+      },
+    },
   ),
   get_model_resolution: topLevelSchema(
     "Get model resolution input",
@@ -1445,6 +1614,8 @@ function defineTool(input: {
   requiredCapability: string;
   featureFlags?: readonly string[];
   candidateReviewResult?: boolean;
+  chatGptFileParams?: boolean;
+  pvoxResultContract?: boolean;
   annotations: ModelMcpToolAnnotations;
 }): ModelMcpToolDefinition {
   const requiredOAuthScopes = deepFreeze(["mcp:access", input.requiredCapability]);
@@ -1474,6 +1645,9 @@ function defineTool(input: {
         ] as const,
       })
     : undefined;
+  const pvoxResultContract = input.pvoxResultContract
+    ? MODEL_MCP_PVOX_RESULT_CONTRACT
+    : undefined;
   return deepFreeze({
     name: input.name,
     title: input.title,
@@ -1486,13 +1660,18 @@ function defineTool(input: {
     featureFlags,
     rollout,
     ...(reviewResult === undefined ? {} : { reviewResult }),
+    ...(pvoxResultContract === undefined ? {} : { pvoxResultContract }),
     securitySchemes: schemes,
     _meta: {
       securitySchemes: schemes,
+      ...(input.chatGptFileParams ? { "openai/fileParams": ["sourceFile"] as const } : {}),
       "plasius/requiredCapability": input.requiredCapability,
       "plasius/featureFlags": featureFlags,
       "plasius/rollout": rollout,
       ...(reviewResult === undefined ? {} : { "plasius/reviewResult": reviewResult }),
+      ...(pvoxResultContract === undefined
+        ? {}
+        : { "plasius/pvoxResultContract": pvoxResultContract }),
     },
   });
 }
@@ -1529,18 +1708,22 @@ export const MODEL_MCP_TOOL_DEFINITIONS = deepFreeze([
     description: "Search promoted model catalog versions using hard constraints and one exact calibrated ranker selection.",
     requiredCapability: MODEL_MCP_CATALOG_REQUEST_CAPABILITY,
     candidateReviewResult: true,
+    pvoxResultContract: true,
     annotations: READ_ONLY_ANNOTATIONS,
   }),
   defineTool({
     name: "resolve_model_request",
     title: "Resolve model request",
-    description: "Search the catalog and idempotently create asynchronous provider or generator fallback work when needed.",
+    description: "Search the catalog and idempotently stage an attached source or create asynchronous provider/generator fallback work.",
     requiredCapability: MODEL_MCP_CATALOG_REQUEST_CAPABILITY,
     featureFlags: [
+      MODEL_MCP_PVOX_FEATURE_FLAG_ID,
       MODEL_MCP_EXTERNAL_HARVEST_FEATURE_FLAG_ID,
       MODEL_MCP_GENERATION_FEATURE_FLAG_ID,
     ],
     candidateReviewResult: true,
+    chatGptFileParams: true,
+    pvoxResultContract: true,
     annotations: OPEN_WORLD_MUTATION_ANNOTATIONS,
   }),
   defineTool({
@@ -1549,6 +1732,7 @@ export const MODEL_MCP_TOOL_DEFINITIONS = deepFreeze([
     description: "Read an owned immutable model-resolution revision, progress, questions, and review evidence.",
     requiredCapability: MODEL_MCP_CATALOG_REQUEST_CAPABILITY,
     candidateReviewResult: true,
+    pvoxResultContract: true,
     annotations: READ_ONLY_ANNOTATIONS,
   }),
   defineTool({
@@ -1556,7 +1740,9 @@ export const MODEL_MCP_TOOL_DEFINITIONS = deepFreeze([
     title: "Confirm model candidate",
     description: "Confirm one exact four-view candidate; low assurance additionally requires explicit semantic-risk acceptance.",
     requiredCapability: MODEL_MCP_CATALOG_CONFIRM_CAPABILITY,
+    featureFlags: [MODEL_MCP_PVOX_FEATURE_FLAG_ID],
     candidateReviewResult: true,
+    pvoxResultContract: true,
     annotations: MUTATION_ANNOTATIONS,
   }),
   defineTool({
@@ -1565,10 +1751,12 @@ export const MODEL_MCP_TOOL_DEFINITIONS = deepFreeze([
     description: "Create the next immutable request revision from bounded refinement answers and candidate exclusions.",
     requiredCapability: MODEL_MCP_CATALOG_REQUEST_CAPABILITY,
     featureFlags: [
+      MODEL_MCP_PVOX_FEATURE_FLAG_ID,
       MODEL_MCP_EXTERNAL_HARVEST_FEATURE_FLAG_ID,
       MODEL_MCP_GENERATION_FEATURE_FLAG_ID,
     ],
     candidateReviewResult: true,
+    pvoxResultContract: true,
     annotations: OPEN_WORLD_MUTATION_ANNOTATIONS,
   }),
   defineTool({
@@ -1655,6 +1843,226 @@ function assertAllowedKeys(
   if (Object.keys(record).some((key) => !allowed.includes(key))) {
     throw new Error(`${field} contains unsupported properties.`);
   }
+}
+
+function normalizeHttpsUrl(value: unknown, field: string, maximumLength: number): string {
+  if (
+    typeof value !== "string"
+    || value.length < 9
+    || value.length > maximumLength
+    || !new RegExp(HTTPS_URL_PATTERN, "u").test(value)
+  ) {
+    throw new Error(`${field} must be a bounded HTTPS URL.`);
+  }
+  let parsed: URL;
+  try {
+    parsed = new URL(value);
+  } catch {
+    throw new Error(`${field} must be a valid HTTPS URL.`);
+  }
+  if (
+    parsed.protocol !== "https:"
+    || parsed.hostname.length === 0
+    || parsed.username.length > 0
+    || parsed.password.length > 0
+    || parsed.href.length > maximumLength
+  ) {
+    throw new Error(`${field} must be a credential-free bounded HTTPS URL.`);
+  }
+  return parsed.href;
+}
+
+function normalizeModelMcpSourceFile(input: unknown): ModelMcpSourceFile {
+  if (!isPlainRecord(input)) {
+    throw new Error("Model resolution sourceFile must be a plain object.");
+  }
+  assertAllowedKeys(
+    input,
+    ["download_url", "file_id", "mime_type", "file_name"],
+    "Model resolution sourceFile",
+  );
+  const downloadUrl = normalizeHttpsUrl(input.download_url, "sourceFile.download_url", 4096);
+  if (!isBoundedPublicText(input.file_id, 512)) {
+    throw new Error("sourceFile.file_id must be a bounded stable file identifier.");
+  }
+  if (
+    input.mime_type !== undefined
+    && (
+      typeof input.mime_type !== "string"
+      || !new RegExp(MIME_TYPE_PATTERN, "u").test(input.mime_type)
+    )
+  ) {
+    throw new Error("sourceFile.mime_type must be a bounded media type.");
+  }
+  if (
+    input.file_name !== undefined
+    && (
+      typeof input.file_name !== "string"
+      || input.file_name === "."
+      || input.file_name === ".."
+      || !new RegExp(SAFE_FILE_NAME_PATTERN, "u").test(input.file_name)
+    )
+  ) {
+    throw new Error("sourceFile.file_name must be an untrusted basename, not a path.");
+  }
+  return deepFreeze({
+    download_url: downloadUrl,
+    file_id: input.file_id,
+    ...(input.mime_type === undefined ? {} : { mime_type: input.mime_type }),
+    ...(input.file_name === undefined ? {} : { file_name: input.file_name }),
+  });
+}
+
+function normalizeModelMcpRightsAttribution(input: unknown): ModelMcpRightsAttribution {
+  if (!isPlainRecord(input) || Object.keys(input).length === 0) {
+    throw new Error("Model rights attribution must be a non-empty plain object.");
+  }
+  assertAllowedKeys(input, [
+    "modelTitle",
+    "creator",
+    "notice",
+    "publicSourceUrl",
+    "publicLicenseUrl",
+  ], "Model rights attribution");
+  for (const [key, maximumLength] of [
+    ["modelTitle", 160],
+    ["creator", 160],
+    ["notice", 500],
+  ] as const) {
+    if (input[key] !== undefined && !isBoundedPublicText(input[key], maximumLength)) {
+      throw new Error(`Model rights attribution ${key} is invalid.`);
+    }
+  }
+  return deepFreeze({
+    ...(input.modelTitle === undefined ? {} : { modelTitle: input.modelTitle as string }),
+    ...(input.creator === undefined ? {} : { creator: input.creator as string }),
+    ...(input.notice === undefined ? {} : { notice: input.notice as string }),
+    ...(input.publicSourceUrl === undefined
+      ? {}
+      : { publicSourceUrl: normalizeHttpsUrl(input.publicSourceUrl, "attribution.publicSourceUrl", 2048) }),
+    ...(input.publicLicenseUrl === undefined
+      ? {}
+      : { publicLicenseUrl: normalizeHttpsUrl(input.publicLicenseUrl, "attribution.publicLicenseUrl", 2048) }),
+  });
+}
+
+function normalizeModelMcpRightsAttestation(input: unknown): ModelMcpRightsAttestation {
+  if (!isPlainRecord(input)) {
+    throw new Error("Model rightsAttestation must be a plain object.");
+  }
+  assertAllowedKeys(input, [
+    "basis",
+    "publicDemoRedistributionAllowed",
+    "derivativeWorksAllowed",
+    "commercialUseAllowed",
+    "licenseId",
+    "attribution",
+  ], "Model rightsAttestation");
+  if (!MODEL_MCP_RIGHTS_ATTESTATION_BASES.includes(
+    input.basis as typeof MODEL_MCP_RIGHTS_ATTESTATION_BASES[number],
+  )) {
+    throw new Error("Model rightsAttestation basis is unsupported.");
+  }
+  if (
+    input.publicDemoRedistributionAllowed !== true
+    || input.derivativeWorksAllowed !== true
+    || input.commercialUseAllowed !== true
+  ) {
+    throw new Error("Model rightsAttestation must explicitly permit public demo redistribution, derivatives, and commercial use.");
+  }
+  if (input.licenseId !== undefined && !isToken(input.licenseId)) {
+    throw new Error("Model rightsAttestation licenseId must be a bounded identifier.");
+  }
+  return deepFreeze({
+    basis: input.basis as typeof MODEL_MCP_RIGHTS_ATTESTATION_BASES[number],
+    publicDemoRedistributionAllowed: true,
+    derivativeWorksAllowed: true,
+    commercialUseAllowed: true,
+    ...(input.licenseId === undefined ? {} : { licenseId: input.licenseId }),
+    ...(input.attribution === undefined
+      ? {}
+      : { attribution: normalizeModelMcpRightsAttribution(input.attribution) }),
+  });
+}
+
+/**
+ * Validate and freeze the additive canonical resolve input. The temporary
+ * download URL remains available only for hosted acquisition and must never be
+ * copied into a durable record or result.
+ */
+export function normalizeModelMcpResolveRequestInput(input: unknown): ModelMcpResolveRequestInput {
+  if (!isPlainRecord(input)) {
+    throw new Error("resolve_model_request input must be a plain object.");
+  }
+  assertAllowedKeys(
+    input,
+    ["request", "idempotencyKey", "sourceFile", "rightsAttestation"],
+    "resolve_model_request input",
+  );
+  if (!isToken(input.idempotencyKey)) {
+    throw new Error("resolve_model_request idempotencyKey is invalid.");
+  }
+  if ((input.sourceFile === undefined) !== (input.rightsAttestation === undefined)) {
+    throw new Error("Uploaded model resolution requires sourceFile and rightsAttestation together.");
+  }
+  return deepFreeze({
+    request: normalizeModelMcpRequestSpec(input.request),
+    idempotencyKey: input.idempotencyKey,
+    ...(input.sourceFile === undefined
+      ? {}
+      : { sourceFile: normalizeModelMcpSourceFile(input.sourceFile) }),
+    ...(input.rightsAttestation === undefined
+      ? {}
+      : { rightsAttestation: normalizeModelMcpRightsAttestation(input.rightsAttestation) }),
+  });
+}
+
+/** Domain separator for requester-bound resolve-model idempotency fingerprints. */
+export const MODEL_MCP_RESOLVE_IDEMPOTENCY_FINGERPRINT_DOMAIN =
+  "plasius:asset-mcp:resolve-model-request:2026-08-24.v1" as const;
+
+/**
+ * Derive a stable SHA-256 request fingerprint. The expiring download URL,
+ * caller-provided filename, and MIME hint are deliberately excluded; the
+ * stable file_id remains bound. Hosts still key records by requester and
+ * idempotency key and must reject a replay whose fingerprint differs.
+ */
+export function createResolveModelRequestIdempotencyFingerprint(input: unknown): string {
+  if (!isPlainRecord(input)) {
+    throw new Error("Resolve-model fingerprint input must be a plain object.");
+  }
+  assertAllowedKeys(input, [
+    "requesterId",
+    "request",
+    "idempotencyKey",
+    "sourceFile",
+    "rightsAttestation",
+  ], "Resolve-model fingerprint input");
+  if (!isBoundedPublicText(input.requesterId, 256)) {
+    throw new Error("Resolve-model fingerprint requesterId is invalid.");
+  }
+  const normalized = normalizeModelMcpResolveRequestInput({
+    request: input.request,
+    idempotencyKey: input.idempotencyKey,
+    ...(input.sourceFile === undefined ? {} : { sourceFile: input.sourceFile }),
+    ...(input.rightsAttestation === undefined
+      ? {}
+      : { rightsAttestation: input.rightsAttestation }),
+  });
+  const canonicalPreimage = JSON.stringify({
+    domain: MODEL_MCP_RESOLVE_IDEMPOTENCY_FINGERPRINT_DOMAIN,
+    requesterId: input.requesterId,
+    toolName: "resolve_model_request",
+    idempotencyKey: normalized.idempotencyKey,
+    request: normalized.request,
+    sourceFileId: normalized.sourceFile?.file_id ?? null,
+    rightsAttestation: normalized.rightsAttestation ?? null,
+  });
+  return createHash("sha256")
+    .update(MODEL_MCP_RESOLVE_IDEMPOTENCY_FINGERPRINT_DOMAIN, "utf8")
+    .update("\0", "utf8")
+    .update(canonicalPreimage, "utf8")
+    .digest("hex");
 }
 
 function normalizeRankerDescriptor(input: unknown): ModelSearchRankerDescriptor {

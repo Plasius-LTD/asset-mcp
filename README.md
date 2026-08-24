@@ -27,7 +27,7 @@ their request-envelope helpers remain source-compatible.
 | --- | --- | --- |
 | `list_model_search_rankers` | List calibrated rankers and readiness evidence. | `asset.catalog.request` |
 | `search_model_catalog` | Search promoted catalog versions only. | `asset.catalog.request` |
-| `resolve_model_request` | Search locally and create governed fallback work when needed. | `asset.catalog.request` |
+| `resolve_model_request` | Search locally, optionally stage a ChatGPT-attached source, and create governed fallback work. | `asset.catalog.request` |
 | `get_model_resolution` | Read an owned immutable request revision and review evidence. | `asset.catalog.request` |
 | `confirm_model_candidate` | Confirm one exact candidate and its four-view evidence. | `asset.catalog.confirm` |
 | `retry_model_resolution` | Create a refined immutable request revision. | `asset.catalog.request` |
@@ -51,6 +51,7 @@ import {
   listModelMcpResourceTemplates,
   listModelMcpToolDefinitions,
   normalizeModelCatalogSearchStructuredContent,
+  normalizeModelMcpResolveRequestInput,
   normalizeModelMcpRequestSpec,
   normalizeModelResolutionStructuredContent,
 } from "@plasius/asset-mcp";
@@ -59,6 +60,7 @@ const tools = listModelMcpToolDefinitions();
 const resourceTemplates = listModelMcpResourceTemplates();
 
 const request = normalizeModelMcpRequestSpec(untrustedRequest);
+const resolveInput = normalizeModelMcpResolveRequestInput(untrustedResolveInput);
 const searchOutput = normalizeModelCatalogSearchStructuredContent(untrustedSearchOutput);
 const resolutionOutput = normalizeModelResolutionStructuredContent(untrustedResolutionOutput);
 ```
@@ -67,6 +69,62 @@ The two structured-output normalizers are required for responses without inline
 images because JSON Schema cannot express equality between arbitrary sibling
 hashes or ranker IDs. The four-view result helper delegates to the same
 normalizers when a review is present.
+
+### ChatGPT attachment input
+
+`resolve_model_request` declares `_meta["openai/fileParams"]` as
+`["sourceFile"]`. Its optional top-level `sourceFile` follows the ChatGPT file
+object exactly: `download_url` and `file_id` are required, while `mime_type`
+and `file_name` are optional and all other properties are rejected. An attached
+source must be paired with `rightsAttestation`; callers must explicitly state
+that public-demo redistribution, derivative work, and commercial use are
+allowed. That statement is evidence for a later independent rights gate and
+does not itself authorize promotion.
+
+```ts
+import {
+  createResolveModelRequestIdempotencyFingerprint,
+  normalizeModelMcpResolveRequestInput,
+} from "@plasius/asset-mcp";
+
+const input = normalizeModelMcpResolveRequestInput({
+  request: untrustedRequest,
+  idempotencyKey: "resolve-upload-1",
+  sourceFile: {
+    download_url: temporaryChatGptUrl,
+    file_id: "file-example",
+    mime_type: "model/gltf-binary",
+    file_name: "example.glb",
+  },
+  rightsAttestation: {
+    basis: "requester-owned",
+    publicDemoRedistributionAllowed: true,
+    derivativeWorksAllowed: true,
+    commercialUseAllowed: true,
+  },
+});
+
+const fingerprint = createResolveModelRequestIdempotencyFingerprint({
+  requesterId: verifiedTokenSubject,
+  ...input,
+});
+```
+
+The fingerprint binds the verified requester, exact tool, idempotency key,
+normalized request, stable `file_id`, and normalized rights statement. It
+deliberately excludes the expiring URL, untrusted filename, and MIME hint.
+Hosts must stream the URL through their bounded acquisition policy, never log
+or persist it, and reject a replay when the stored fingerprint differs.
+
+### PVOX v2 contract discovery
+
+`@plasius/asset-contracts@^0.4.0` is the source of truth for PVOX states,
+manifests, candidates, processing evidence, and JSON Schemas. This package
+re-exports that released family and advertises `MODEL_MCP_PVOX_RESULT_CONTRACT`
+on candidate-bearing descriptors. Existing v1 structured-output schemas and
+normalizers remain compatible; hosted adapters may retain a v1 review
+projection while linking authenticated resources to the full v2 PVOX record.
+This package performs no download, conversion, rendering, or promotion work.
 
 ### Exact ranker selection
 
@@ -123,15 +181,14 @@ through catalog templates. Catalog resource matching uses the canonical
 immutable-version validator, so moving aliases such as `latest` or `production`
 and wildcard labels cannot be treated as immutable catalog evidence.
 
-`@plasius/asset-contracts@0.3.1` still represents resolution questions as
-strings and does not yet apply the MCP package's 128-character asset-ID cap.
-Until the next shared-contract release adopts those two additive constraints,
-host adapters must map stored question prompts to stable MCP `questionId`
-records and enforce the stricter MCP asset-ID boundary.
+The v1 compatibility projection retains stable MCP `questionId` records and
+the MCP package's stricter 128-character asset-ID boundary. Full PVOX v2
+records use the released `@plasius/asset-contracts` validators and schemas.
 
 ## Feature Flag
 
 - `asset.pipeline.unified-ai-assets.enabled`
+- `asset.pipeline.pvox-models.enabled` when uploaded PVOX processing or promotion is attempted
 - `asset.pipeline.external-model-harvest.enabled` when provider fallback is attempted
 - `asset.pipeline.ai-model-generation.enabled` when generation fallback is attempted
 

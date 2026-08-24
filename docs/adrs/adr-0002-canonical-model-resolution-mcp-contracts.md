@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted — 2026-07-13
+Accepted — 2026-07-13; amended 2026-08-24
 
 ## Context
 
@@ -78,6 +78,23 @@ The legacy dotted constants, definitions, types, and envelope helper remain
 unchanged. Hosts may implement compatibility aliases over the same services,
 but this package does not execute hosted actions.
 
+As an additive extension, `resolve_model_request` accepts an optional
+top-level `sourceFile` and publishes `_meta["openai/fileParams"]` for that exact
+field. The file object declares all four ChatGPT runtime fields, requires only
+`download_url` and `file_id`, and closes the object to unknown properties. An
+uploaded file is valid only when paired with a structured rights attestation
+that explicitly permits public-demo redistribution, derivatives, and
+commercial use. Confirmation remains a separate tool and capability.
+
+The package now depends on `@plasius/asset-contracts@^0.4.0`, re-exports its
+PVOX v2 state, manifest, candidate, processing, and JSON Schema contracts, and
+advertises their immutable identifiers through
+`MODEL_MCP_PVOX_RESULT_CONTRACT`. The existing v1 result projection remains
+source-compatible; hosted services own the durable v2 record and may project
+the existing four-view response from it. The conditional
+`asset.pipeline.pvox-models.enabled` flag gates attached-source processing and
+PVOX confirmation.
+
 ## Security and failure posture
 
 - JSON Schemas close objects to unknown properties and bound identifiers,
@@ -101,6 +118,15 @@ but this package does not execute hosted actions.
   parent unified flag remains mandatory for every tool.
 - No provider URL, storage path, SAS value, token, secret, or image data is
   logged or persisted by this contract package.
+- ChatGPT download URLs must be bounded HTTPS values without embedded
+  credentials. They are intentionally excluded from idempotency fingerprints;
+  the verified requester, exact tool, key, normalized request, stable
+  `file_id`, and rights statement are included instead.
+- User filenames and MIME values are untrusted hints. The schema rejects path
+  separators and unknown fields, while hosted acquisition remains responsible
+  for redirect, DNS/IP, byte, time, and content verification.
+- A rights attestation is never a licensing bypass: independent rights,
+  malware, PVOX, fidelity, renderer, and review gates still fail closed.
 
 ## Alternatives considered
 
@@ -121,14 +147,15 @@ but this package does not execute hosted actions.
 - Hosts can emit structured-only candidate lists or one common review envelope
   with exactly four image blocks; catalog search never creates a confirmation
   capability for a promoted match by itself.
+- ChatGPT can bind a user attachment to the canonical resolve action without a
+  parallel upload tool or a result that exposes the temporary download URL.
 - Provider, processing, review, and generator packages can evolve behind the
   stable MCP boundary.
 - Any schema expansion must remain additive within this contract version or
   publish a new version.
-- `@plasius/asset-contracts@0.3.1` still stores refinement questions as strings
-  and does not cap asset IDs at 128 characters. Hosted adapters enforce the MCP
-  projection until those two constraints ship in the next shared-contract
-  release.
+- PVOX v2 remains an additive hosted/resource contract. Switching the existing
+  v1 structured result to v2 would require a separately versioned public MCP
+  result contract rather than a silent schema replacement.
 - Hosts remain responsible for owner checks, hard licensing/technical gates,
   idempotency, cancellation, deadlines, and atomic promotion.
 
