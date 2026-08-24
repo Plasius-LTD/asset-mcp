@@ -1751,6 +1751,7 @@ export const MODEL_MCP_TOOL_DEFINITIONS = deepFreeze([
     description: "Create the next immutable request revision from bounded refinement answers and candidate exclusions.",
     requiredCapability: MODEL_MCP_CATALOG_REQUEST_CAPABILITY,
     featureFlags: [
+      MODEL_MCP_PVOX_FEATURE_FLAG_ID,
       MODEL_MCP_EXTERNAL_HARVEST_FEATURE_FLAG_ID,
       MODEL_MCP_GENERATION_FEATURE_FLAG_ID,
     ],

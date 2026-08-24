@@ -527,6 +527,7 @@ describe("canonical model-resolution MCP contracts", () => {
     );
     expect(tools.get_model_resolution?._meta["openai/fileParams"]).toBeUndefined();
     expect(tools.retry_model_resolution?.rollout.conditionalFeatureFlags).toEqual([
+      MODEL_MCP_PVOX_FEATURE_FLAG_ID,
       MODEL_MCP_EXTERNAL_HARVEST_FEATURE_FLAG_ID,
       MODEL_MCP_GENERATION_FEATURE_FLAG_ID,
     ]);
