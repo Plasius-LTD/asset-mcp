@@ -3,16 +3,28 @@
 ## Unreleased
 
 - **Added**
-  - (placeholder)
+  - Added an optional ChatGPT `sourceFile` parameter to
+    `resolve_model_request`, paired with a closed public-demo rights
+    attestation and `_meta["openai/fileParams"]` discovery metadata.
+  - Added requester-bound resolve idempotency fingerprints that use stable
+    `file_id` and rights inputs without retaining expiring download URLs.
+  - Re-exported the released PVOX v2 lifecycle, manifest, evidence, and JSON
+    Schema contracts and advertised their identifiers on candidate tools.
 
 - **Changed**
-  - (placeholder)
+  - Updated `@plasius/asset-contracts` to `^0.4.0` and added the conditional
+    `asset.pipeline.pvox-models.enabled` rollout gate while retaining all eight
+    canonical tools, legacy wrappers, and v1 result normalizers.
 
 - **Fixed**
   - (placeholder)
 
 - **Security**
-  - (placeholder)
+  - Closed and bounded attachment/rights objects, required credential-free
+    HTTPS download URLs, treated filenames and MIME values as untrusted hints,
+    and kept confirmation behind `asset.catalog.confirm`.
+  - Pinned patched development transitive releases for `brace-expansion`,
+    `fast-uri`, and `nanoid` after the full dependency audit.
 
 ## [0.1.6] - 2026-08-20
 

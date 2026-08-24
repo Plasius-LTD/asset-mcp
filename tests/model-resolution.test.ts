@@ -19,12 +19,15 @@ import {
   MODEL_MCP_CATALOG_REVIEW_CAPABILITY,
   MODEL_MCP_EXTERNAL_HARVEST_FEATURE_FLAG_ID,
   MODEL_MCP_GENERATION_FEATURE_FLAG_ID,
+  MODEL_MCP_PVOX_FEATURE_FLAG_ID,
   MODEL_MCP_PIPELINE_MANAGE_CAPABILITY,
   MODEL_MCP_PREVIEW_SIZE_PX,
   MODEL_MCP_RESOURCE_TEMPLATES,
   MODEL_MCP_SOURCE_MANAGE_CAPABILITY,
   MODEL_MCP_TOOL_NAMES,
   MODEL_MCP_UNIFIED_FEATURE_FLAG_ID,
+  MODEL_MCP_PVOX_RESULT_CONTRACT,
+  createResolveModelRequestIdempotencyFingerprint,
   createModelCandidateReviewToolResult,
   getModelMcpToolDefinition,
   isModelMcpResourceUri,
@@ -32,6 +35,7 @@ import {
   listModelMcpToolDefinitions,
   normalizeModelCatalogSearchStructuredContent,
   normalizeModelMcpRefinementAnswers,
+  normalizeModelMcpResolveRequestInput,
   normalizeModelMcpRequestSpec,
   normalizeModelResolutionStructuredContent,
   selectModelSearchRanker,
@@ -398,6 +402,33 @@ function validInputs(): Record<(typeof EXPECTED_TOOL_NAMES)[number], unknown> {
   };
 }
 
+function uploadedSourceInput(downloadUrl = "https://files.openaiusercontent.com/file-demo?token=temporary") {
+  return {
+    request: requestSpec(),
+    idempotencyKey: "resolve-upload-1",
+    sourceFile: {
+      download_url: downloadUrl,
+      file_id: "file-demo-1",
+      mime_type: "model/gltf-binary",
+      file_name: "oak-table.glb",
+    },
+    rightsAttestation: {
+      basis: "requester-owned",
+      publicDemoRedistributionAllowed: true,
+      derivativeWorksAllowed: true,
+      commercialUseAllowed: true,
+      licenseId: "LicenseRef-Plasius-Demo",
+      attribution: {
+        modelTitle: "Oak table",
+        creator: "Example creator",
+        notice: "Used with the creator's permission.",
+        publicSourceUrl: "https://example.com/models/oak-table",
+        publicLicenseUrl: "https://example.com/licenses/demo",
+      },
+    },
+  };
+}
+
 function validOutputs(): Record<(typeof EXPECTED_TOOL_NAMES)[number], unknown> {
   return {
     list_model_search_rankers: {
@@ -479,9 +510,22 @@ describe("canonical model-resolution MCP contracts", () => {
     }
     expect(tools.resolve_model_request?.featureFlags).toEqual([
       MODEL_MCP_UNIFIED_FEATURE_FLAG_ID,
+      MODEL_MCP_PVOX_FEATURE_FLAG_ID,
       MODEL_MCP_EXTERNAL_HARVEST_FEATURE_FLAG_ID,
       MODEL_MCP_GENERATION_FEATURE_FLAG_ID,
     ]);
+    expect(tools.confirm_model_candidate?.featureFlags).toEqual([
+      MODEL_MCP_UNIFIED_FEATURE_FLAG_ID,
+      MODEL_MCP_PVOX_FEATURE_FLAG_ID,
+    ]);
+    expect(tools.resolve_model_request?._meta["openai/fileParams"]).toEqual(["sourceFile"]);
+    expect(tools.resolve_model_request?._meta["plasius/pvoxResultContract"]).toEqual(
+      MODEL_MCP_PVOX_RESULT_CONTRACT,
+    );
+    expect(tools.resolve_model_request?._meta["plasius/pvoxResultContract"]?.resolutionStates).toContain(
+      "voxelizing",
+    );
+    expect(tools.get_model_resolution?._meta["openai/fileParams"]).toBeUndefined();
     expect(tools.retry_model_resolution?.rollout.conditionalFeatureFlags).toEqual([
       MODEL_MCP_EXTERNAL_HARVEST_FEATURE_FLAG_ID,
       MODEL_MCP_GENERATION_FEATURE_FLAG_ID,
@@ -535,6 +579,193 @@ describe("canonical model-resolution MCP contracts", () => {
       revision: 0,
       locale: "en-GB",
     });
+  });
+
+  it("accepts the official ChatGPT file object only with a bounded public-demo rights attestation", () => {
+    const resolveTool = definition("resolve_model_request");
+    const validate = compile(resolveTool.inputSchema);
+    const valid = uploadedSourceInput();
+
+    expect(validate(valid), ajv.errorsText(validate.errors)).toBe(true);
+    const normalized = normalizeModelMcpResolveRequestInput(valid);
+    expect(normalized).toMatchObject({
+      idempotencyKey: "resolve-upload-1",
+      sourceFile: { file_id: "file-demo-1", file_name: "oak-table.glb" },
+      rightsAttestation: { basis: "requester-owned" },
+    });
+    expect(Object.isFrozen(normalized)).toBe(true);
+    expect(Object.isFrozen(normalized.sourceFile)).toBe(true);
+    expect(Object.isFrozen(normalized.rightsAttestation?.attribution)).toBe(true);
+    expect((resolveTool.inputSchema.properties as Record<string, unknown>).sourceFile).toMatchObject({
+      type: "object",
+      required: ["download_url", "file_id"],
+      additionalProperties: false,
+      properties: {
+        download_url: expect.any(Object),
+        file_id: expect.any(Object),
+        mime_type: expect.any(Object),
+        file_name: expect.any(Object),
+      },
+    });
+
+    for (const invalid of [
+      { ...valid, sourceFile: { ...valid.sourceFile, download_url: undefined } },
+      { ...valid, sourceFile: { ...valid.sourceFile, file_id: undefined } },
+      { ...valid, sourceFile: { ...valid.sourceFile, unexpected: true } },
+      { ...valid, sourceFile: { ...valid.sourceFile, download_url: "http://files.example/model.glb" } },
+      { ...valid, sourceFile: { ...valid.sourceFile, file_name: "../model.glb" } },
+      { request: valid.request, idempotencyKey: valid.idempotencyKey, sourceFile: valid.sourceFile },
+      { request: valid.request, idempotencyKey: valid.idempotencyKey, rightsAttestation: valid.rightsAttestation },
+      {
+        ...valid,
+        rightsAttestation: {
+          ...valid.rightsAttestation,
+          publicDemoRedistributionAllowed: false,
+        },
+      },
+      {
+        ...valid,
+        rightsAttestation: {
+          ...valid.rightsAttestation,
+          unexpected: true,
+        },
+      },
+    ]) {
+      expect(validate(invalid), JSON.stringify(invalid)).toBe(false);
+      expect(() => normalizeModelMcpResolveRequestInput(invalid)).toThrow();
+    }
+    expect(() => normalizeModelMcpResolveRequestInput(null)).toThrow(/plain object/i);
+    expect(() => normalizeModelMcpResolveRequestInput({ ...valid, unexpected: true })).toThrow(/unsupported/i);
+
+    const localOnly = normalizeModelMcpResolveRequestInput({
+      request: valid.request,
+      idempotencyKey: "resolve-local-1",
+    });
+    expect(localOnly.sourceFile).toBeUndefined();
+    expect(normalizeModelMcpResolveRequestInput({
+      ...valid,
+      sourceFile: {
+        download_url: "https://files.openaiusercontent.com/file-minimal",
+        file_id: "file-minimal",
+      },
+      rightsAttestation: {
+        basis: "public-domain",
+        publicDemoRedistributionAllowed: true,
+        derivativeWorksAllowed: true,
+        commercialUseAllowed: true,
+      },
+    }).sourceFile).toEqual({
+      download_url: "https://files.openaiusercontent.com/file-minimal",
+      file_id: "file-minimal",
+    });
+
+    for (const invalid of [
+      { ...valid, idempotencyKey: "../invalid" },
+      { ...valid, sourceFile: null },
+      { ...valid, sourceFile: { ...valid.sourceFile, download_url: "https://" } },
+      { ...valid, sourceFile: { ...valid.sourceFile, download_url: "https://example.com/model\n" } },
+      { ...valid, sourceFile: { ...valid.sourceFile, download_url: "https://user:secret@example.com/model" } },
+      { ...valid, sourceFile: { ...valid.sourceFile, file_id: "   " } },
+      { ...valid, sourceFile: { ...valid.sourceFile, mime_type: 42 } },
+      { ...valid, sourceFile: { ...valid.sourceFile, mime_type: "not-a-media-type" } },
+      { ...valid, sourceFile: { ...valid.sourceFile, file_name: "." } },
+      { ...valid, rightsAttestation: null },
+      { ...valid, rightsAttestation: { ...valid.rightsAttestation, basis: "unknown" } },
+      { ...valid, rightsAttestation: { ...valid.rightsAttestation, licenseId: "../license" } },
+      { ...valid, rightsAttestation: { ...valid.rightsAttestation, attribution: {} } },
+      {
+        ...valid,
+        rightsAttestation: {
+          ...valid.rightsAttestation,
+          attribution: { ...valid.rightsAttestation.attribution, unexpected: true },
+        },
+      },
+      {
+        ...valid,
+        rightsAttestation: {
+          ...valid.rightsAttestation,
+          attribution: { modelTitle: "https://private.example/model" },
+        },
+      },
+      {
+        ...valid,
+        rightsAttestation: {
+          ...valid.rightsAttestation,
+          attribution: { publicSourceUrl: "http://example.com/model" },
+        },
+      },
+    ]) expect(() => normalizeModelMcpResolveRequestInput(invalid), JSON.stringify(invalid)).toThrow();
+  });
+
+  it("fingerprints uploaded resolutions without binding the expiring download URL", () => {
+    const base = {
+      requesterId: "requester:demo-1",
+      ...uploadedSourceInput("https://files.openaiusercontent.com/file-demo?token=first"),
+    };
+    const fingerprint = createResolveModelRequestIdempotencyFingerprint(base);
+
+    expect(fingerprint).toMatch(/^[a-f0-9]{64}$/u);
+    expect(createResolveModelRequestIdempotencyFingerprint({
+      ...base,
+      sourceFile: {
+        ...base.sourceFile,
+        download_url: "https://files.openaiusercontent.com/file-demo?token=second",
+        mime_type: "application/octet-stream",
+        file_name: "renamed.glb",
+      },
+    })).toBe(fingerprint);
+    expect(createResolveModelRequestIdempotencyFingerprint({
+      ...base,
+      request: {
+        exclusions: base.request.exclusions,
+        softPreferences: base.request.softPreferences,
+        hardConstraints: base.request.hardConstraints,
+        rankerId: base.request.rankerId,
+        locale: base.request.locale,
+        revision: base.request.revision,
+        query: base.request.query,
+        policyProfileId: base.request.policyProfileId,
+        contractVersion: base.request.contractVersion,
+      },
+    })).toBe(fingerprint);
+    expect(createResolveModelRequestIdempotencyFingerprint({
+      ...base,
+      sourceFile: { ...base.sourceFile, file_id: "file-demo-2" },
+    })).not.toBe(fingerprint);
+    expect(createResolveModelRequestIdempotencyFingerprint({
+      ...base,
+      requesterId: "requester:demo-2",
+    })).not.toBe(fingerprint);
+    expect(createResolveModelRequestIdempotencyFingerprint({
+      ...base,
+      idempotencyKey: "resolve-upload-2",
+    })).not.toBe(fingerprint);
+    expect(createResolveModelRequestIdempotencyFingerprint({
+      ...base,
+      request: { ...base.request, query: "A modern oak table" },
+    })).not.toBe(fingerprint);
+    expect(createResolveModelRequestIdempotencyFingerprint({
+      ...base,
+      rightsAttestation: { ...base.rightsAttestation, licenseId: "CC0-1.0" },
+    })).not.toBe(fingerprint);
+    expect(() => createResolveModelRequestIdempotencyFingerprint({
+      ...base,
+      sourceFile: { ...base.sourceFile, download_url: "http://private.example/model.glb" },
+    })).toThrow(/HTTPS/i);
+    expect(() => createResolveModelRequestIdempotencyFingerprint(null)).toThrow(/plain object/i);
+    expect(() => createResolveModelRequestIdempotencyFingerprint({
+      ...base,
+      unexpected: true,
+    })).toThrow(/unsupported/i);
+    expect(() => createResolveModelRequestIdempotencyFingerprint({
+      ...base,
+      requesterId: "https://identity.example/requester",
+    })).toThrow(/requesterId/i);
+    expect(createResolveModelRequestIdempotencyFingerprint({
+      requesterId: "requester:demo-1",
+      request: base.request,
+      idempotencyKey: "resolve-local-1",
+    })).toMatch(/^[a-f0-9]{64}$/u);
   });
 
   it("matches released request, identifier, token, and attempt boundaries", () => {
