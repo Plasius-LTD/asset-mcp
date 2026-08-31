@@ -1,5 +1,13 @@
 # @plasius/asset-mcp
 
+[![npm version](https://img.shields.io/npm/v/@plasius/asset-mcp.svg)](https://www.npmjs.com/package/@plasius/asset-mcp)
+[![Build Status](https://img.shields.io/github/actions/workflow/status/Plasius-LTD/asset-mcp/ci.yml?branch=main&label=build&style=flat)](https://github.com/Plasius-LTD/asset-mcp/actions/workflows/ci.yml)
+[![coverage](https://img.shields.io/codecov/c/github/Plasius-LTD/asset-mcp)](https://codecov.io/gh/Plasius-LTD/asset-mcp)
+[![License](https://img.shields.io/github/license/Plasius-LTD/asset-mcp)](./LICENSE)
+[![Code of Conduct](https://img.shields.io/badge/code%20of%20conduct-yes-blue.svg)](./CODE_OF_CONDUCT.md)
+[![Security Policy](https://img.shields.io/badge/security%20policy-yes-orange.svg)](./SECURITY.md)
+[![Changelog](https://img.shields.io/badge/changelog-md-blue.svg)](./CHANGELOG.md)
+
 MCP tool contracts for governed Plasius asset upload, generation, processing,
 review, promotion, rollback, manifest lookup, and asynchronous model resolution.
 
